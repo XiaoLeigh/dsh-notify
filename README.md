@@ -39,8 +39,32 @@
 - `assets/whale-on-light.ico` —— 近黑鲸鱼，浅色背景用
 
 脚本按 `SystemUsesLightTheme` 选哪一个（Windows 11 混搭模式很常见：应用浅色、系统深色，
-而通知跟随**系统**主题），换主题后下一次通知会自动换图标。想换成自己的图标，把
-`assets/whale-on-*.ico` 替掉即可（`.ico`，建议含 16/32/48/256 多种尺寸）。
+而通知跟随**系统**主题），换主题后下一次通知会自动换图标。
+
+### 切换颜色
+
+三种方式，从省事到彻底：
+
+| 想要 | 做法 | 何时生效 |
+|---|---|---|
+| 跟着 Windows 深浅色自动换 | 什么都不用做（默认 `icon: auto`），改 设置 → 个性化 → 颜色 → **Windows 模式** | 下一条通知 |
+| 固定用白色 / 固定用黑色 | 在包内 `cordis.patch.yml` 的 `config:` 里加 `icon: white`（或 `black`） | 重启 DSH |
+| 换成任意自己的图标 | 把 `icon:` 设成 `.ico` 的绝对路径；或直接覆盖 `assets/whale-on-*.ico` | 用路径需重启；覆盖文件下一条通知即生效 |
+
+```yaml
+# node_modules/dsh-notify/cordis.patch.yml
+- insert:
+    - id: dsh-notify
+      name: dsh-notify
+      config:
+        icon: white        # auto | white | black | D:\path\to\my.ico
+```
+
+`white` = `assets/whale-on-dark.ico`（白鲸鱼），`black` = `assets/whale-on-light.ico`
+（近黑鲸鱼）。写错或文件不存在时自动退回 `auto`，不会把通知弄坏。
+
+切换后如果图标没变，是 shell 缓存了 AUMID 的图标，跑一次 `ie4uinit.exe -show` 或重启
+explorer 即可。
 
 > 鲸鱼图形来自 DSH 自带的 favicon 标记，属于 DeepSeek 的商标，只是用来标识被通知的应用；
 > 它不在本项目的 MIT 授权范围内。给别的产品做通知时请换成自己的图标。

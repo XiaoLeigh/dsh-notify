@@ -9,7 +9,9 @@ param(
   [string]$Title = 'DSH',
   [string]$Body  = 'Task finished',
   [string]$Sound = 'default',   # default | chime | none
-  [string]$IconPath = '',
+  [string]$IconPath = '',       # legacy alias for -AppExe
+  [string]$AppExe = '',         # shorcut target (the DeepSeek Harness executable)
+  [string]$Icon = '',           # explicit .ico; empty means "follow the theme"
   [string]$Wav = ''
 )
 
@@ -60,8 +62,9 @@ function Ensure-AppId() {
   $lnk = Join-Path $programs 'DeepSeek Harness.lnk'
   $stamp = Join-Path $programs '.dsh-notify.lnk.stamp'
 
-  $icon = Get-ThemeIcon
-  $target = if ($IconPath -and (Test-Path -LiteralPath $IconPath)) { $IconPath } else { $icon }
+  $icon = if ($Icon -and (Test-Path -LiteralPath $Icon)) { $Icon } else { Get-ThemeIcon }
+  $appExe = if ($AppExe) { $AppExe } elseif ($IconPath) { $IconPath } else { '' }
+  $target = if ($appExe -and (Test-Path -LiteralPath $appExe)) { $appExe } else { $icon }
   if (-not $icon) { $icon = $target }
 
   $ticks = 0

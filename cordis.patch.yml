@@ -10,6 +10,7 @@
 #     minSeconds: 0         # announce even short turns (default: 20s)
 #     notifyAborted: true   # also announce turns you stopped yourself
 #     sound: none           # no sound, notification only
+#     icon: white           # auto (follow system theme) | white | black | <path to .ico>
 - insert:
     - id: dsh-notify
       name: dsh-notify
