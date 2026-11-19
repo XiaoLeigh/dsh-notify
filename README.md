@@ -1,5 +1,9 @@
 # dsh-notify
 
+![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
+![license](https://img.shields.io/badge/license-MIT-green)
+![dsh](https://img.shields.io/badge/dsh-0.2.x-blue)
+
 [English](#english) · 中文
 
 让 DeepSeek Harness（DSH）在**需要你出手**或**一轮结束**时弹 Windows 通知 + 提示音。
@@ -15,21 +19,36 @@
 
 - 首次发送时由 `lib/ensure-appid.ps1` 自动完成两件注册：
   1. 注册表 `HKCU\Software\Classes\AppUserModelId\DeepSeek.Harness.Notify`
-     （DisplayName = `DeepSeek Harness`，IconUri 指向 DSH 的 exe）；
+     （DisplayName = `DeepSeek Harness`，IconUri 指向下面的鲸鱼图标）；
   2. 在开始菜单建 `DeepSeek Harness.lnk`，把它的 `System.AppUserModel.ID` 设为同一个 AUMID。
 
   **第 2 条才是能不能显示的关键。** 只写注册表而不建快捷方式时，Windows 会**收下** toast
   （通知历史里查得到记录）但**从不显示**，也不报错 —— 这就是之前"日志有记录、屏幕没东西"的根因。
   快捷方式只在缺失时创建一次，被删掉也会自动重建；它同时会成为开始菜单里的一个图标。
-- 音频用本包自带的 `assets/codex-notification.wav`（Codex 的原声），找不到就回退系统提示音。
-  注意：这个 wav 是 OpenAI Codex 的资源，仅为本地复刻体验随包携带，**不在 MIT 授权范围内**；
-  要公开分发请先换成自己的音效或删掉它（删掉后自动回退系统提示音）。
+- 音频默认用本包自带的 `assets/chime.wav`（为本项目合成的两音提示，MIT 干净）。如果你本地
+  额外放一份 `assets/codex-notification.wav`（Codex 原声），会优先用它 —— 那个文件已被
+  `.gitignore` 排除，**不在 MIT 授权范围内**，不会随仓库或分发包发布。两者都没有时回退系统提示音。
 - 点击 toast 会激活 `dshnotify://focus`，由 `lib/focus-window.ps1` 把 DSH 窗口还原并置前。
 - toast 通道不可用时（例如在低完整性沙箱里跑）回退到托盘气泡 + 系统提示音。
 
 > 注意：在 DSH 的**沙箱内**（完整性级别 Low）调 WinRT toast 会抛
 > `The process has no package identity (0x80073D54)`。那是沙箱限制，不是插件问题；
 > 插件在 host 进程里发通知，不受此限。
+
+## 快速开始
+
+```powershell
+git clone https://github.com/XiaoLeigh/dsh-notify
+dsh plugin --profile desktop add file:<克隆路径>\dsh-notify
+# 重启 DSH，然后随便发一句话；下一轮结束（≥20s）就会看到通知
+```
+
+验证是否真的走了原生 toast（而不是回退到托盘气泡）：
+
+```powershell
+Get-Content "$env:TEMP\dsh-notify.log" -Tail 5
+# 看到 "notify ..." + "diag: ... shown=True" 就是成功
+```
 
 ## 图标
 
@@ -155,6 +174,43 @@ Copy-Item <克隆目录>\dsh-notify\* `
     "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-notify\lib\win-notify.ps1" `
     -Title "DSH" -Body "测试通知" -Sound chime
   ```
+
+## FAQ
+
+**为什么等了半天也不弹？**
+先看日志有没有 `diag: ... shown=True`。有 `diag` → 通知确实被系统接收了，多半是
+「专注助手 / 勿扰」或该应用的通知被关掉；没有 `diag` → 子进程没跑起来，检查
+`lib/win-notify.ps1` 是否还在、PowerShell 是否被策略拦。
+
+**为什么有时候一次来两条？**
+审批类通知（`approval/asked`）和轮次结束通知（`turn/end`）是两件独立的事。一轮里既让你
+批准、最后又完成了，就会收到两条。想减少打扰可以把 `minSeconds` 调大。
+
+**怎么完全静音？**
+配置里加 `sound: none`（仍然弹通知，只是不响）。
+
+**只想在一轮结束时提醒，不要审批提醒？**
+```yaml
+config:
+  notifyApproval: false
+  notifyQuestion: false
+```
+
+**点通知没反应？**
+`dshnotify://` 协议是首次发通知时注册的。手工验证：
+`Start-Process "dshnotify://focus"`；没反应就删掉
+`HKCU\Software\Classes\dshnotify` 再发一条通知让它重建。
+
+**卸载后开始菜单还留着「DeepSeek Harness」？**
+那个快捷方式是通知能显示的必需品，卸载时不会自动删。手动删
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs\DeepSeek Harness.lnk`
+和 `HKCU\Software\Classes\AppUserModelId\DeepSeek.Harness.Notify` 即可。
+
+**会往系统里写什么？**
+只有三处，全是当前用户级别、都可逆：一个开始菜单快捷方式、一个 `AppUserModelId` 注册表项、
+一个 `dshnotify://` 协议项。没有服务、没有计划任务、没有开机启动。
+
+变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 已知限制
 
