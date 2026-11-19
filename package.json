@@ -12,7 +12,7 @@
   },
   "files": [
     "lib",
-    "assets",
+    "assets/chime.wav",
     "cordis.patch.yml",
     "README.md",
     "LICENSE"
