@@ -31,18 +31,53 @@ function Esc([string]$s) {
   return $s
 }
 
+function Get-ThemeIcon() {
+  # The toast header shows the app icon over the toast background. Toasts follow
+  # the *system* theme on Windows 11 (mixed mode is common: apps light, system
+  # dark), so read SystemUsesLightTheme first and fall back to AppsUseLightTheme.
+  $assets = Join-Path (Split-Path -Parent $Here) 'assets'
+  $light = $null
+  $personalize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+  foreach ($name in @('SystemUsesLightTheme', 'AppsUseLightTheme')) {
+    try {
+      $value = (Get-ItemProperty $personalize -Name $name -ErrorAction Stop).$name
+      if ($null -ne $value) { $light = $value; break }
+    } catch { }
+  }
+  $name = if ($light -eq 1) { 'whale-on-light.ico' } else { 'whale-on-dark.ico' }
+  $candidate = Join-Path $assets $name
+  if (Test-Path -LiteralPath $candidate) { return $candidate }
+  return ''
+}
+
 function Ensure-AppId() {
   # Windows only *displays* toasts from an unpackaged process when a Start-menu
   # shortcut carries this AppUserModelID; the registry key alone is accepted but
-  # never shown. ensure-appid.ps1 creates that shortcut once.
+  # never shown. ensure-appid.ps1 creates that shortcut once, and re-creates it
+  # when the target/icon changes (tracked by a stamp file next to the shortcut).
   $programs = [Environment]::GetFolderPath('Programs')
   if (-not $programs) { $programs = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs' }
   $lnk = Join-Path $programs 'DeepSeek Harness.lnk'
-  if (Test-Path -LiteralPath $lnk) { return }
+  $stamp = Join-Path $programs '.dsh-notify.lnk.stamp'
+
+  $icon = Get-ThemeIcon
+  $target = if ($IconPath -and (Test-Path -LiteralPath $IconPath)) { $IconPath } else { $icon }
+  if (-not $icon) { $icon = $target }
+
+  $ticks = 0
+  try { $ticks = (Get-Item -LiteralPath $icon -ErrorAction Stop).LastWriteTimeUtc.Ticks } catch { }
+  $want = '{0}|{1}|{2}' -f $target, $icon, $ticks
+
+  $have = ''
+  try { if (Test-Path -LiteralPath $stamp) { $have = (Get-Content -LiteralPath $stamp -Raw).Trim() } } catch { }
+  if ((Test-Path -LiteralPath $lnk) -and $have -eq $want) { return }
+
   $helper = Join-Path $Here 'ensure-appid.ps1'
   if (Test-Path -LiteralPath $helper) {
-    & $helper -AppId $AppId -Target $IconPath -DisplayName 'DeepSeek Harness'
+    & $helper -AppId $AppId -Target $target -Icon $icon -DisplayName 'DeepSeek Harness' -Force
+    try { Set-Content -LiteralPath $stamp -Value $want -Encoding ASCII } catch { }
   }
+  $script:ToastIcon = $icon
 }
 
 function Ensure-Protocol() {
@@ -116,7 +151,11 @@ if (-not $shown) {
     Add-Type -AssemblyName System.Drawing
     if ($Sound -ne 'none') { [System.Media.SystemSounds]::Asterisk.Play() }
     $ni = New-Object System.Windows.Forms.NotifyIcon
-    $ni.Icon = [System.Drawing.SystemIcons]::Information
+    $balloonIcon = $null
+    if ($script:ToastIcon) {
+      try { $balloonIcon = New-Object System.Drawing.Icon($script:ToastIcon) } catch { }
+    }
+    if ($balloonIcon) { $ni.Icon = $balloonIcon } else { $ni.Icon = [System.Drawing.SystemIcons]::Information }
     $ni.BalloonTipTitle = $Title
     $ni.BalloonTipText = $Body
     $ni.Visible = $true

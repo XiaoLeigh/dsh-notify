@@ -10,8 +10,10 @@
 param(
   [string]$AppId = 'DeepSeek.Harness.Notify',
   [string]$Target = '',
+  [string]$Icon = '',
   [string]$DisplayName = 'DeepSeek Harness',
-  [string]$LinkName = 'DeepSeek Harness.lnk'
+  [string]$LinkName = 'DeepSeek Harness.lnk',
+  [switch]$Force
 )
 
 $ErrorActionPreference = 'Continue'
@@ -87,12 +89,12 @@ namespace DshNotify
     {
         const string PKEY_AppUserModel_ID = "9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3";
 
-        public static void Create(string lnkPath, string target, string appId, string description)
+        public static void Create(string lnkPath, string target, string appId, string description, string icon)
         {
             var link = (IShellLinkW)new CShellLink();
             link.SetPath(target);
             link.SetDescription(description);
-            link.SetIconLocation(target, 0);
+            link.SetIconLocation(string.IsNullOrEmpty(icon) ? target : icon, 0);
 
             var store = (IPropertyStore)link;
             var key = new PROPERTYKEY();
@@ -127,12 +129,14 @@ try {
   $key = "HKCU:\Software\Classes\AppUserModelId\$AppId"
   if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
   Set-ItemProperty -Path $key -Name 'DisplayName' -Value $DisplayName
-  if ($Target -and (Test-Path -LiteralPath $Target)) {
-    Set-ItemProperty -Path $key -Name 'IconUri' -Value $Target
+  $iconUri = if ($Icon -and (Test-Path -LiteralPath $Icon)) { $Icon } else { $Target }
+  if ($iconUri -and (Test-Path -LiteralPath $iconUri)) {
+    Set-ItemProperty -Path $key -Name 'IconUri' -Value $iconUri
   }
 } catch { }
 
-if (Test-Path -LiteralPath $lnk) { exit 0 }
+if ((Test-Path -LiteralPath $lnk) -and -not $Force) { exit 0 }
+if ($Force) { Remove-Item -LiteralPath $lnk -Force -ErrorAction SilentlyContinue }
 
 if (-not $Target) { $Target = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe' }
 try {
@@ -144,13 +148,14 @@ try {
     $s = $ws.CreateShortcut($lnk)
     $s.TargetPath = $Target
     $s.Description = $DisplayName
+    if ($Icon -and (Test-Path -LiteralPath $Icon)) { $s.IconLocation = $Icon }
     $s.Save()
   } catch { }
   exit 0
 }
 
 try {
-  [DshNotify.Shortcut]::Create($lnk, $Target, $AppId, "$DisplayName notifications")
+  [DshNotify.Shortcut]::Create($lnk, $Target, $AppId, "$DisplayName notifications", $Icon)
 } catch {
   # Never fail a notification because registration failed.
 }
