@@ -42,5 +42,14 @@
   "engines": {
     "node": ">=20"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XiaoLeigh/dsh-notify.git"
+  },
+  "homepage": "https://github.com/XiaoLeigh/dsh-notify#readme",
+  "bugs": {
+    "url": "https://github.com/XiaoLeigh/dsh-notify/issues"
+  },
+  "author": "XiaoLeigh <1544314809@qq.com>",
   "license": "MIT"
 }

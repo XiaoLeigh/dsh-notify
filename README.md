@@ -174,7 +174,7 @@ fails, is truncated or is blocked.
 # 1) install into a DSH profile (pick the one you use)
 dsh plugin --profile desktop add <path-or-git-url>
 # or from source:
-#   git clone https://github.com/<you>/dsh-notify
+#   git clone https://github.com/XiaoLeigh/dsh-notify
 #   dsh plugin --profile desktop add file:<abs-path>/dsh-notify
 # 2) restart DSH
 ```
