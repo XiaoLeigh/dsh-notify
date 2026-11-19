@@ -1,0 +1,9 @@
+# Keep the repo text-only and consistent across platforms.
+* text=auto eol=lf
+
+# PowerShell resolves these fine with LF, but CRLF is the Windows-native form
+# and keeps editors from rewriting them.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+*.wav binary

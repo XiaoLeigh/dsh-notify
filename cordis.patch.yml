@@ -1,0 +1,15 @@
+# dsh-notify bundle patch: one host row, no client half.
+# The row name resolves from the profile's own node_modules, where this package
+# is installed as `dsh-notify`.
+#
+# This row announces everything: approvals, questions, completed turns,
+# failures, truncation and blocked turns.
+#
+# To override the plugin defaults, add a `config:` block to the row below, e.g.
+#   config:
+#     minSeconds: 0         # announce even short turns (default: 20s)
+#     notifyAborted: true   # also announce turns you stopped yourself
+#     sound: none           # no sound, notification only
+- insert:
+    - id: dsh-notify
+      name: dsh-notify

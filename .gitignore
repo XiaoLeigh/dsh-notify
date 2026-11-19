@@ -1,0 +1,15 @@
+# build artifacts
+dist/
+*.tgz
+
+# package-manager caches
+.npm-cache/
+node_modules/
+
+# local-only assets: OpenAI's Codex notification sound, never redistributed
+assets/codex-notification.wav
+
+# local logs / OS noise
+*.log
+Thumbs.db
+.DS_Store
